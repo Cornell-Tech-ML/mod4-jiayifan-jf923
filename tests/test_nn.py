@@ -32,7 +32,18 @@ def test_avg(t: Tensor) -> None:
 @given(tensors(shape=(2, 3, 4)))
 def test_max(t: Tensor) -> None:
     # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
+    # Add a small random perturbation to ensure unique values (avoid ties)
+    t_noisy = t + minitorch.rand(t.shape)  # Ensures unique values for gradient checking
+
+    # Apply max along a chosen dimension
+    dim = 1
+    out = minitorch.max(t_noisy, dim)
+
+    # Check that the output shape is correct after reduction
+    assert out.shape == (2, 1, 4), f"Expected shape (2,1,4) but got {out.shape}"
+
+    # Gradient check with random perturbation to avoid ties
+    minitorch.grad_check(lambda x: minitorch.nn.max(x, 2), t_noisy)
 
 
 @pytest.mark.task4_4
