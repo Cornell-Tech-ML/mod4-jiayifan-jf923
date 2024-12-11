@@ -108,25 +108,34 @@ class Scalar:
         self.__setattr__("derivative", self.derivative + x)
 
     def is_leaf(self) -> bool:
-        """True if this variable created by the user (no `last_fn`)"""
+        """Returns True if this variable is leaf."""
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """Returns True if the variable is constant."""
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
-        """Get the variables used to create this one."""
+        """Returns the parent variables of this variable."""
         assert self.history is not None
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Computes gradients using the chain rule."""
         h = self.history
         assert h is not None
         assert h.last_fn is not None
         assert h.ctx is not None
 
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # TODO: Implement for Task 1.3.
+        derivative = h.last_fn._backward(h.ctx, d_output)
+        pairs = zip(h.inputs, derivative)
+        return_values = []
+        for i, j in pairs:
+            # if not i.is_constant:
+            return_values.append((i, j))
+        return return_values
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.
@@ -141,17 +150,56 @@ class Scalar:
             d_output = 1.0
         backpropagate(self, d_output)
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # TODO: Implement for Task 1.2.
+    def __eq__(self, b: ScalarLike) -> Scalar:
+        """Equality check."""
+        return EQ.apply(self, b)
+
+    def __lt__(self, b: ScalarLike) -> Scalar:
+        """Less than comparison."""
+        return LT.apply(self, b)
+
+    def __gt__(self, b: ScalarLike) -> Scalar:
+        """Greater than comparison."""
+        return LT.apply(b, self)  # Reverse order for greater than
+
+    def __sub__(self, b: ScalarLike) -> Scalar:
+        """Subtraction operation."""
+        return Add.apply(self, -b)
+
+    def __neg__(self) -> Scalar:
+        """Negation operation."""
+        return Neg.apply(self)
+
+    def __add__(self, b: ScalarLike) -> Scalar:
+        """Addition operation."""
+        return Add.apply(self, b)
+
+    def log(self) -> Scalar:
+        """Natural logarithm operation."""
+        return Log.apply(self)
+
+    def exp(self) -> Scalar:
+        """Exponential operation."""
+        return Exp.apply(self)
+
+    def sigmoid(self) -> Scalar:
+        """Sigmoid activation function."""
+        return Sigmoid.apply(self)
+
+    def relu(self) -> Scalar:
+        """ReLU activation function."""
+        return ReLU.apply(self)
 
 
 def derivative_check(f: Any, *scalars: Scalar) -> None:
     """Checks that autodiff works on a python function.
     Asserts False if derivative is incorrect.
 
-    Parameters
-    ----------
-        f : function from n-scalars to 1-scalar.
-        *scalars  : n input scalar values.
+    Args:
+    ----
+        f (Any): function from n-scalars to 1-scalar.
+        *scalars (Scalar): n input scalar values.
 
     """
     out = f(*scalars)

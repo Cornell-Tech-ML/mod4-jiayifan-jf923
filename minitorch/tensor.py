@@ -94,10 +94,10 @@ class Tensor:
 
         self.f = backend
 
-    def requires_grad_(self, x: bool) -> None:
+    def requires_grad_(self, x: bool) -> None:  # noqa: D102
         self.history = History()
 
-    def requires_grad(self) -> bool:
+    def requires_grad(self) -> bool:  # noqa: D102
         return self.history is not None
 
     def to_numpy(self) -> npt.NDArray[np.float64]:
@@ -193,7 +193,7 @@ class Tensor:
         return Tensor.make(out._tensor._storage, self.shape, backend=self.backend)
         # END CODE CHANGE (2021)
 
-    def zeros(self, shape: Optional[UserShape] = None) -> Tensor:
+    def zeros(self, shape: Optional[UserShape] = None) -> Tensor:  # noqa: D102
         def zero(shape: UserShape) -> Tensor:
             return Tensor.make(
                 [0.0] * int(operators.prod(shape)), shape, backend=self.backend
@@ -238,15 +238,15 @@ class Tensor:
         """True if this variable created by the user (no `last_fn`)"""
         return self.history is not None and self.history.last_fn is None
 
-    def is_constant(self) -> bool:
+    def is_constant(self) -> bool:  # noqa: D102
         return self.history is None
 
     @property
-    def parents(self) -> Iterable[Variable]:
+    def parents(self) -> Iterable[Variable]:  # noqa: D102
         assert self.history is not None
         return self.history.inputs
 
-    def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+    def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:  # noqa: D102
         h = self.history
         assert h is not None
         assert h.last_fn is not None
@@ -259,7 +259,7 @@ class Tensor:
             for inp, d_in in zip(h.inputs, x)
         ]
 
-    def backward(self, grad_output: Optional[Tensor] = None) -> None:
+    def backward(self, grad_output: Optional[Tensor] = None) -> None:  # noqa: D102
         if grad_output is None:
             assert self.shape == (1,), "Must provide grad_output if non-scalar"
             grad_output = Tensor.make([1.0], (1,), backend=self.backend)
@@ -283,5 +283,94 @@ class Tensor:
         """
         return self._tensor.shape
 
+    @property
+    def size(self) -> int:
+        """Returns:
+        int : size of the tensor
+
+        """
+        return self._tensor.size
+
+    @property
+    def dims(self) -> int:
+        """Returns:
+        int : dimensionality of the tensor
+
+        """
+        return self._tensor.dims
+
+    def zero_grad_(self) -> None:  # pragma: no cover
+        """Reset the derivative on this variable."""
+        self.grad = None
+
     # Functions
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # TODO: Implement for Task 2.3.
+    def __add__(self, b: TensorLike) -> Tensor:
+        return Add.apply(self, self._ensure_tensor(b))
+
+    def __sub__(self, b: TensorLike) -> Tensor:
+        return Add.apply(self, -self._ensure_tensor(b))
+
+    def __mul__(self, b: TensorLike) -> Tensor:
+        return Mul.apply(self, self._ensure_tensor(b))
+
+    def __lt__(self, b: TensorLike) -> Tensor:
+        return LT.apply(self, self._ensure_tensor(b))
+
+    def __eq__(self, b: TensorLike) -> Tensor:  # type: ignore[override]
+        return EQ.apply(self, self._ensure_tensor(b))
+
+    def __gt__(self, b: TensorLike) -> Tensor:
+        return LT.apply(self._ensure_tensor(b), self)
+
+    def __neg__(self) -> Tensor:
+        return Neg.apply(self)
+
+    def __radd__(self, b: TensorLike) -> Tensor:
+        return self + b
+
+    def __rmul__(self, b: TensorLike) -> Tensor:
+        return self * b
+
+    def all(self, dim: Optional[int] = None) -> Tensor:  # noqa: D102
+        if dim is None:
+            return All.apply(self.view(self.size), self._ensure_tensor(0))
+        else:
+            return All.apply(self, self._ensure_tensor(dim))
+
+    def is_close(self, y: Tensor) -> Tensor:  # noqa: D102
+        return IsClose.apply(self, y)
+
+    def sigmoid(self) -> Tensor:  # noqa: D102
+        return Sigmoid.apply(self)
+
+    def relu(self) -> Tensor:  # noqa: D102
+        return ReLU.apply(self)
+
+    def log(self) -> Tensor:  # noqa: D102
+        return Log.apply(self)
+
+    def exp(self) -> Tensor:  # noqa: D102
+        return Exp.apply(self)
+
+    def sum(self, dim: Optional[int] = None) -> Tensor:
+        """Compute the sum over dimension `dim`"""
+        if dim is None:
+            return Sum.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
+        else:
+            return Sum.apply(self, self._ensure_tensor(dim))
+
+    def mean(self, dim: Optional[int] = None) -> Tensor:
+        """Compute the mean over dimension `dim`"""
+        if dim is not None:
+            return self.sum(dim) / self.shape[dim]
+        else:
+            return self.sum() / self.size
+
+    def permute(self, *order: int) -> Tensor:
+        """Permute tensor dimensions to *order"""
+        return Permute.apply(self, tensor(list(order)))
+
+    def view(self, *shape: int) -> Tensor:
+        """Change the shape of the tensor to a new shape with the same size"""
+        return View.apply(self, tensor(list(shape)))

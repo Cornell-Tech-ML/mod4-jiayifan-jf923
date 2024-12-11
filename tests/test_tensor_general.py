@@ -96,6 +96,9 @@ def test_one_derivative(
     """Run backward for all one arg functions above."""
     t1 = data.draw(tensors(backend=shared[backend]))
     name, _, tensor_fn = fn
+    print("name", name)
+    print("tensor_fn", tensor_fn)
+    print("t1", t1)
     grad_check(tensor_fn, t1)
 
 
@@ -229,6 +232,10 @@ if numba.cuda.is_available():
         y = minitorch.tensor(y1, backend=shared["cuda"])
         z2 = x @ y
 
+        print("x1", x1)
+        print("y1", y1)
+        print("z", z)
+        print("z2", z2)
         for i in range(2):
             for j in range(2):
                 assert_close(z[i, j], z2[i, j])
@@ -306,7 +313,7 @@ if numba.cuda.is_available():
 
 
 @given(data())
-@settings(max_examples=25)
+@settings(max_examples=26)
 @pytest.mark.parametrize("fn", two_arg)
 @pytest.mark.parametrize("backend", backend_tests)
 def test_two_grad_broadcast(
